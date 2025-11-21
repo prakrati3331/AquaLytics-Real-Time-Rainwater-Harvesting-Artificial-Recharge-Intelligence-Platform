@@ -1,0 +1,2 @@
+# AquaLytics-Real-Time-Rainwater-Harvesting-Artificial-Recharge-Intelligence-Platform
+AquaLytics is a next-generation, GIS-enhanced assessment platform built for Smart India Hackathon 2025 (PS ID: 25065). It delivers instant, scientific, and location-aware evaluations of Rooftop Rainwater Harvesting (RTRWH) and Artificial Recharge (AR) potential—transforming complex CGWB guidelines into a simple, actionable, citizen-friendly tool.
