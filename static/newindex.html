@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RWH AQUALYTICS</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Google Maps API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC_h8P-tKfSzx3U3x8w8YLMnuatTqYWBDU&libraries=places&callback=initMap" async defer></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+
+<header class="bg-white shadow">
+  <div class="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
+    <div class="flex items-center">
+      <i class="fas fa-tint text-blue-800 text-3xl mr-3"></i>
+      <h1 class="text-2xl font-bold">AQUALYTICS</h1>
+    </div>
+    <span class="text-sm text-gray-500">
+      <i class="fas fa-calendar-alt mr-1"></i>
+      <span id="currentDate"></span>
+    </span>
+  </div>
+</header>
+
+  <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+    <!-- Quick Access to Aquifer Analysis -->
+    <div class="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center">
+          <i class="fas fa-chart-pie text-blue-600 mr-2"></i>
+          <span class="text-blue-800 font-medium">Aquifer Type Recommendation System</span>
+        </div>
+        <a href="/aquifer" class="text-blue-600 hover:text-blue-800 font-medium text-sm">
+          Access Analysis <i class="fas fa-arrow-right ml-1"></i>
+        </a>
+      </div>
+    </div>
+
+  <!-- Input Form -->
+  <div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-xl font-semibold mb-4 flex items-center">
+      <i class="fas fa-map-marker-alt text-blue-800 mr-2"></i>
+      Location & Property Details
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <input id="district" type="text" placeholder="District" class="border px-3 py-2 rounded w-full">
+          <input id="state" type="text" placeholder="State" class="border px-3 py-2 rounded w-full">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <input id="roofArea" type="number" placeholder="Roof Area (m²)" class="border px-3 py-2 rounded w-full">
+          <select id="roofType" class="border px-3 py-2 rounded w-full">
+            <option value="CONCRETE">Concrete</option>
+            <option value="GI_SHEET">GI Sheet</option>
+            <option value="TILE">Tile</option>
+            <option value="THATCHED">Thatched</option>
+          </select>
+          <input id="openSpace" type="number" placeholder="Open Space Area (m²)" class="border px-3 py-2 rounded w-full">
+          <input id="dwellers" type="number" placeholder="Number of Dwellers" class="border px-3 py-2 rounded w-full">
+        </div>
+        <button onclick="submitForm()" class="w-full bg-blue-800 text-white py-2 rounded hover:bg-blue-900">Check Feasibility</button>
+      </div>
+
+      <!-- Google Map for GIS -->
+      <div>
+        <input id="mapSearch" type="text" placeholder="Search location..." class="border px-3 py-2 rounded w-full mb-2">
+        <div id="map" class="w-full h-72 rounded border"></div>
+        <div class="flex gap-3 mt-2">
+          <button onclick="getLocation()" class="flex-1 bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
+            <i class="fas fa-location-arrow mr-2"></i> Use My Location
+          </button>
+          <button onclick="useMarkerLocation()" class="px-4 py-2 border rounded">Use Marker</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Results Section -->
+  <div id="resultsSection" class="hidden space-y-8">
+
+    <!-- Feasibility / Demand / Harvested -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="bg-white p-6 rounded shadow">
+        <h3 class="font-semibold">Feasibility Score</h3>
+        <p id="feasibilityStatus" class="text-2xl font-bold text-blue-800">-</p>
+      </div>
+      <div class="bg-white p-6 rounded shadow">
+        <h3 class="font-semibold">Annual Demand</h3>
+        <p id="annualDemand" class="text-2xl font-bold text-blue-600">-</p>
+      </div>
+      <div class="bg-white p-6 rounded shadow">
+        <h3 class="font-semibold">Harvested Water</h3>
+        <p id="harvestedWater" class="text-2xl font-bold text-green-600">-</p>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div class="bg-white p-6 rounded shadow">
+      <h3 class="font-semibold mb-3">Demand vs Harvested Water</h3>
+      <canvas id="rwhChart" height="85"></canvas>
+    </div>
+
+    <!-- Zoomable SVG Maps with Legends -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">Rainfall Map</h3>
+        <div id="rainfallMap" class="w-full h-[400px] overflow-auto border rounded"></div>
+        <div id="rainfallLegend" class="flex justify-around mt-2 text-sm"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">Aquifer Map</h3>
+        <div id="aquiferMap" class="w-full h-[400px] overflow-auto border rounded"></div>
+        <div id="aquiferLegend" class="flex justify-around mt-2 text-sm"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">Pre-Monsoon GW Map</h3>
+        <div id="preMonsoonMap" class="w-full h-[400px] overflow-auto border rounded"></div>
+        <div id="preMonsoonLegend" class="flex justify-around mt-2 text-sm"></div>
+      </div>
+      <div class="bg-white p-4 rounded shadow">
+        <h3 class="font-semibold mb-2">Post-Monsoon GW Map</h3>
+        <div id="postMonsoonMap" class="w-full h-[400px] overflow-auto border rounded"></div>
+        <div id="postMonsoonLegend" class="flex justify-around mt-2 text-sm"></div>
+      </div>
+    </div>
+
+  <!-- Full Response Details -->
+  <div id="fullResponse" class="space-y-4 mt-6">
+    <h3 class="text-xl font-bold text-gray-800 mb-2">Detailed Response</h3>
+    <div id="responseContent" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+  </div>
+
+  </div>
+</main>
+<script>
+document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+
+let map, marker, geocoder, searchBox, chart;
+
+// ---------------- Google Maps for Input ----------------
+function initMap() {
+    geocoder = new google.maps.Geocoder();
+    map = new google.maps.Map(document.getElementById("map"), { center: { lat: 22.97, lng: 78.65 }, zoom: 5 });
+    marker = new google.maps.Marker({ map });
+
+    const input = document.getElementById("mapSearch");
+    searchBox = new google.maps.places.SearchBox(input);
+
+    searchBox.addListener("places_changed", () => {
+        const places = searchBox.getPlaces();
+        if (!places || places.length === 0) return;
+        const place = places[0];
+        if (!place.geometry) return;
+
+        marker.setPosition(place.geometry.location);
+        map.setCenter(place.geometry.location);
+        map.setZoom(12);
+
+        fillDistrictState(place);
+    });
+
+    map.addListener("click", e => { 
+        marker.setPosition(e.latLng); 
+        reverseGeocode(e.latLng);
+    });
+}
+
+// ---------------- Fill District & State ----------------
+function fillDistrictState(place) {
+    let district = "";
+    let state = "";
+    let city = "";
+
+    place.address_components.forEach(component => {
+        const types = component.types;
+        if (types.includes("administrative_area_level_2")) district = component.long_name;
+        if (types.includes("administrative_area_level_1")) state = component.long_name;
+        if (types.includes("locality") || types.includes("sublocality_level_1")) city = component.long_name;
+    });
+
+    // Prefer city over district if available
+    if (city) district = city;
+
+    if (district) district = district.replace(/\s*District$/i, "").replace(/\s*Division$/i, "").trim();
+    document.getElementById("district").value = district;
+    document.getElementById("state").value = state;
+}
+
+// ---------------- Reverse Geocode ----------------
+function reverseGeocode(latlng) {
+    if (!geocoder) return;
+    geocoder.geocode({ location: latlng }, (results, status) => {
+        if (status === "OK" && results[0]) {
+            fillDistrictState(results[0]);
+        }
+    });
+}
+
+// ---------------- Get Current Location ----------------
+function getLocation() {
+    if (!navigator.geolocation) return alert("Geolocation not supported.");
+    navigator.geolocation.getCurrentPosition(pos => {
+        const ll = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        map.setCenter(ll);
+        map.setZoom(12);
+        marker.setPosition(ll);
+        reverseGeocode(ll);
+    }, err => alert("Error getting location: " + err.message));
+}
+
+// ---------------- Use Marker Location ----------------
+function useMarkerLocation() {
+    const pos = marker.getPosition();
+    if (pos) {
+        map.setCenter(pos);
+        reverseGeocode(pos);
+    }
+}
+
+// ---------------- Submit Form ----------------
+async function submitForm() {
+    const payload = {
+        district: document.getElementById("district").value,
+        state: document.getElementById("state").value,
+        roofArea: parseFloat(document.getElementById("roofArea").value),
+        roofType: document.getElementById("roofType").value,
+        dwellers: parseInt(document.getElementById("dwellers").value)
+    };
+
+    try {
+        const res = await fetch("/process-location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        displayResults(data);
+    } catch(err) { 
+        alert("Error: "+err); 
+    }
+}
+
+// ---------------- Display Results & Load SVGs ----------------
+function displayResults(data) {
+    document.getElementById("resultsSection").classList.remove("hidden");
+    document.getElementById("feasibilityStatus").textContent = (data.feasibilityScore*100).toFixed(1) + "%";
+    document.getElementById("annualDemand").textContent = data.annualDemandLiters.toLocaleString()+" L";
+    document.getElementById("harvestedWater").textContent = data.harvestedWaterLiters.toLocaleString()+" L";
+
+    const ctx = document.getElementById("rwhChart");
+    if(chart) chart.destroy();
+    chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: ["Annual Demand","Harvested Water"],
+            datasets: [{ label:"Liters", data:[data.annualDemandLiters, data.harvestedWaterLiters], backgroundColor:["#2563eb","#16a34a"] }]
+        }
+    });
+  // ---------------- Display Full Response ----------------
+  const responseContainer = document.getElementById("responseContent");
+  responseContainer.innerHTML = ""; // Clear previous
+
+  // Function to format value nicely
+  function formatValue(key, value) {
+      if (key === "feasibilityScore") return (value*100).toFixed(1) + "%";
+      if (key === "annualDemandLiters" || key === "harvestedWaterLiters") return value.toLocaleString() + " L";
+      if (Array.isArray(value)) return `<pre class="whitespace-pre-wrap text-xs">${JSON.stringify(value,null,2)}</pre>`;
+      return value;
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+      const card = document.createElement("div");
+      card.className = "bg-white p-4 rounded-lg shadow hover:shadow-lg transition duration-200";
+
+      const label = document.createElement("div");
+      label.className = "text-gray-500 text-sm font-medium mb-1";
+      label.textContent = key.replace(/([A-Z])/g, " $1").replace(/^./, str => str.toUpperCase());
+
+      const val = document.createElement("div");
+      val.className = "text-gray-800 font-semibold";
+      val.innerHTML = formatValue(key, value);
+
+      // Highlight important values
+      if(key === "feasibilityScore") val.classList.add("text-blue-700");
+      if(key === "harvestedWaterLiters") val.classList.add("text-green-600");
+      if(key === "annualDemandLiters") val.classList.add("text-indigo-600");
+
+      card.appendChild(label);
+      card.appendChild(val);
+      responseContainer.appendChild(card);
+  }
+
+
+
+    const timestamp = new Date().getTime();
+    loadSVG("rainfallMap", `/static/rainfall.svg?v=${timestamp}`);
+    loadSVG("preMonsoonMap", `/static/premonsoon.svg?v=${timestamp}`);
+    loadSVG("postMonsoonMap", `/static/postmonsoon.svg?v=${timestamp}`);
+    loadSVG("aquiferMap", `/static/aquifer_map.svg?v=${timestamp}`);
+
+    createLegends();
+}
+
+// ---------------- Load SVG ----------------
+async function loadSVG(containerId, filePath){
+    try {
+        const resp = await fetch(filePath);
+        const text = await resp.text();
+        const div = document.getElementById(containerId);
+        div.innerHTML = text;
+        const svg = div.querySelector("svg");
+        if(svg){
+            svg.setAttribute("width","100%");
+            svg.setAttribute("height","100%");
+            svg.setAttribute("preserveAspectRatio","xMidYMid meet");
+        }
+        const paths = div.querySelectorAll("path");
+        paths.forEach(p => {
+            p.style.cursor="pointer";
+            p.addEventListener("click", ()=>{
+                const bbox = p.getBBox();
+                const svg = div.querySelector("svg");
+                const padding = 20;
+                svg.setAttribute("viewBox", `${bbox.x - padding} ${bbox.y - padding} ${bbox.width + 2*padding} ${bbox.height + 2*padding}`);
+            });
+        });
+    } catch(err) { console.error("SVG load failed:", err); }
+}
+
+// ---------------- Legends ----------------
+function createLegends() {
+    const rainfallLegend = [
+        {label:"0 mm: LD", color:"#c6dbef"},
+        {label:"400 mm: D", color:"#9ecae1"},
+        {label:"750 mm: N", color:"#6baed6"},
+        {label:"1000 mm: E", color:"#2171b5"},
+        {label:"1500+ mm: LE", color:"#08306b"},
+    ];
+    const aquiferLegend = [
+        {label:"Alluvium", color:"#FFF3B0"},
+        {label:"Sandstone", color:"#A3C4F3"},
+        {label:"Basalt", color:"#B9FBC0"},
+        {label:"Crystalline", color:"#FFADAD"},
+        {label:"Limestone", color:"#D7BDE2"},
+        {label:"Other", color:"#E6B8A2"},
+    ];
+    const preMonsoonLegend = [
+        {label:"0 to 2 m", color:"#ffffcc"},
+        {label:"2 to 5 m", color:"#ffeda0"},
+        {label:"5 to 10 m", color:"#fed976"},
+        {label:"10 to 20 m", color:"#feb24c"},
+        {label:"20 to 40 m", color:"#fd8d3c"},
+        {label:"40+ m", color:"#e31a1c"}
+    ];
+    const postMonsoonLegend = [
+        {label:"0 to 2 m", color:"#00441b"},
+        {label:"2 to 5 m", color:"#006d2c"},
+        {label:"5 to 10 m", color:"#238b45"},
+        {label:"10 to 20 m", color:"#41ab5d"},
+        {label:"20 to 40 m", color:"#74c476"},
+        {label:"40+ m", color:"#c7e9c0"}
+    ];
+
+    function appendLegend(containerId, items) {
+        const legendDiv = document.getElementById(containerId);
+        legendDiv.innerHTML = "";
+        items.forEach(cat => {
+            const item = document.createElement("div");
+            item.classList.add("flex","items-center","gap-1");
+            item.innerHTML = `<span style="display:inline-block;width:20px;height:20px;background-color:${cat.color};border:1px solid #000;"></span>
+                              <span>${cat.label}</span>`;
+            legendDiv.appendChild(item);
+        });
+    }
+
+    appendLegend("rainfallLegend", rainfallLegend);
+    appendLegend("aquiferLegend", aquiferLegend);
+    appendLegend("preMonsoonLegend", preMonsoonLegend);
+    appendLegend("postMonsoonLegend", postMonsoonLegend);
+}
+</script>
+
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC_h8P-tKfSzx3U3x8w8YLMnuatTqYWBDU&libraries=places&callback=initMap" async defer></script>
+</body>
+</html>

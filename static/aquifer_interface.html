@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aquifer Type Recommendation System</title>
+
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Font Awesome -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+.gradient-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.metric-card {
+    @apply bg-white rounded-lg shadow-lg p-6 transition-all duration-300 hover:shadow-xl;
+}
+
+.confidence-high { @apply text-green-600; }
+.confidence-medium { @apply text-yellow-600; }
+.confidence-low { @apply text-red-600; }
+
+.loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body class="min-h-screen gradient-bg">
+    <!-- Header -->
+    <header class="bg-white/10 backdrop-blur-sm shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-mountain text-white text-3xl mr-3"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold text-white">Aquifer Type Recommendation</h1>
+                        <p class="text-blue-100">AI-Powered Geological Analysis System</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="modelStatus" class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-yellow-400 mr-2"></div>
+                        <span class="text-white text-sm">Checking Model...</span>
+                    </div>
+                    <button onclick="goHome()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-all">
+                        <i class="fas fa-home mr-2"></i>Main System
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Input Section -->
+        <div class="metric-card mb-8">
+            <h2 class="text-xl font-semibold mb-6 flex items-center text-gray-800">
+                <i class="fas fa-vial text-blue-600 mr-3"></i>
+                Geological Parameters Input
+            </h2>
+
+            <form onsubmit="handleSubmit(event)" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Location Information -->
+                    <div class="space-y-4">
+                        <h3 class="font-medium text-gray-700 flex items-center">
+                            <i class="fas fa-map-marker-alt mr-2"></i>Location Details
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">State</label>
+                                <input type="text" id="state" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="e.g., Maharashtra">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">District</label>
+                                <input type="text" id="district" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="e.g., Pune">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Groundwater Levels -->
+                    <div class="space-y-4">
+                        <h3 class="font-medium text-gray-700 flex items-center">
+                            <i class="fas fa-water mr-2"></i>Groundwater Levels (meters)
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Pre-Monsoon Level</label>
+                                <input type="text" id="preMonsoon" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="e.g., 5 to 10 or >40">
+                                <small class="text-gray-500">Format: "5 to 10" or ">40"</small>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Post-Monsoon Level</label>
+                                <input type="text" id="postMonsoon" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="e.g., 2 to 5 or >40">
+                                <small class="text-gray-500">Format: "2 to 5" or ">40"</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Hydrological Parameters -->
+                    <div class="space-y-4">
+                        <h3 class="font-medium text-gray-700 flex items-center">
+                            <i class="fas fa-chart-line mr-2"></i>Hydrological Data
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Fluctuation</label>
+                                <input type="number" step="0.1" id="fluctuation" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="3.5">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Elevation (m)</label>
+                                <input type="number" step="0.1" id="elevation" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="150.5">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Rainfall Data -->
+                    <div class="space-y-4">
+                        <h3 class="font-medium text-gray-700 flex items-center">
+                            <i class="fas fa-cloud-rain mr-2"></i>Rainfall Data (mm)
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Actual Rainfall</label>
+                                <input type="number" step="0.1" id="actualRainfall" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="850.0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Normal Rainfall</label>
+                                <input type="number" step="0.1" id="normalRainfall" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="800.0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Parameters -->
+                    <div class="space-y-4">
+                        <h3 class="font-medium text-gray-700 flex items-center">
+                            <i class="fas fa-percentage mr-2"></i>Additional Metrics
+                        </h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-600 mb-1">Departure (%)</label>
+                                <input type="number" step="0.1" id="percentDep" required
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="6.25">
+                                <small class="text-gray-500">Percentage departure from normal</small>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit"
+                                class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 px-6 rounded-lg font-semibold transition-all duration-300 flex items-center justify-center">
+                            <i class="fas fa-search mr-2"></i>
+                            Predict Aquifer Type
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loadingIndicator" class="hidden flex justify-center items-center p-8">
+            <div class="text-center">
+                <div class="loading-spinner mx-auto mb-4"></div>
+                <p class="text-white">Analyzing geological parameters...</p>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultsSection" class="hidden space-y-8">
+            <!-- Main Prediction -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="metric-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Primary Prediction</h3>
+                        <i class="fas fa-microscope text-2xl text-blue-600"></i>
+                    </div>
+                    <div class="text-center">
+                        <div id="mainPrediction" class="text-3xl font-bold text-gray-800 mb-2">-</div>
+                        <div id="confidenceLevel" class="text-sm text-gray-600">Confidence: -</div>
+                        <div class="mt-4 flex justify-center">
+                            <div id="confidenceBadge" class="px-3 py-1 rounded-full text-sm font-medium">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Prediction Confidence</h3>
+                        <i class="fas fa-chart-pie text-2xl text-green-600"></i>
+                    </div>
+                    <div class="w-full h-64 relative overflow-hidden">
+                        <canvas id="predictionChart" class="w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Probabilities Table -->
+            <div class="metric-card">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Detailed Probability Analysis</h3>
+                    <i class="fas fa-table text-xl text-purple-600"></i>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aquifer Type</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Probability</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Confidence Level</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="probabilitiesTable" class="bg-white divide-y divide-gray-200">
+                            <!-- Table rows will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Model Information -->
+            <div class="metric-card">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800">Model Features Used</h3>
+                    <i class="fas fa-cogs text-xl text-indigo-600"></i>
+                </div>
+                <div id="modelFeatures" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    <!-- Features will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex justify-center space-x-4">
+                <button onclick="resetForm()"
+                        class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 flex items-center">
+                    <i class="fas fa-redo mr-2"></i>Analyze Another Location
+                </button>
+                <button onclick="exportResults()"
+                        class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 flex items-center">
+                    <i class="fas fa-download mr-2"></i>Export Results
+                </button>
+            </div>
+        </div>
+
+        <!-- Error Display -->
+        <div id="errorSection" class="hidden metric-card border-l-4 border-red-500">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-semibold text-red-800">Analysis Error</h3>
+                    <p id="errorMessage" class="text-red-600 mt-1">-</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-gray-400">
+                <i class="fas fa-copyright mr-1"></i>
+                Aquifer Type Recommendation System - Powered by Machine Learning
+            </p>
+        </div>
+    </footer>
+
+<script>
+// Global variables
+let predictionChart;
+let currentResults = null;
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    checkModelStatus();
+});
+
+// Check model status
+async function checkModelStatus() {
+    try {
+        const response = await fetch('/aquifer/status');
+        const data = await response.json();
+
+        const statusEl = document.getElementById('modelStatus');
+        if (statusEl) {
+            if (data.model_loaded) {
+                statusEl.innerHTML = `
+                    <div class="w-3 h-3 rounded-full bg-green-400 mr-2"></div>
+                    <span class="text-white text-sm">Model Ready</span>
+                `;
+                loadModelFeatures();
+            } else {
+                statusEl.innerHTML = `
+                    <div class="w-3 h-3 rounded-full bg-red-400 mr-2"></div>
+                    <span class="text-white text-sm">Model Not Available</span>
+                `;
+            }
+        }
+    } catch (error) {
+        const statusEl = document.getElementById('modelStatus');
+        if (statusEl) {
+            statusEl.innerHTML = `
+                <div class="w-3 h-3 rounded-full bg-red-400 mr-2"></div>
+                <span class="text-white text-sm">Connection Error</span>
+            `;
+        }
+        console.error('Error checking model status:', error);
+    }
+}
+
+// Load model features
+async function loadModelFeatures() {
+    try {
+        const response = await fetch('/aquifer/features');
+        const data = await response.json();
+        displayFeatures(data.features);
+    } catch (error) {
+        console.error('Error loading features:', error);
+    }
+}
+
+// Display model features
+function displayFeatures(features) {
+    const container = document.getElementById('modelFeatures');
+    if (!container) {
+        console.error('Model features container not found');
+        return;
+    }
+
+    container.innerHTML = '';
+
+    if (!features || !Array.isArray(features) || features.length === 0) {
+        console.warn('No features data to display');
+        return;
+    }
+
+    features.forEach(feature => {
+        const featureEl = document.createElement('div');
+        featureEl.className = 'bg-blue-100 text-blue-800 px-3 py-2 rounded-md text-sm font-medium';
+        featureEl.textContent = feature.replace(/_/g, ' ').toLowerCase();
+        container.appendChild(featureEl);
+    });
+}
+
+// Handle form submission
+async function handleSubmit(event) {
+    event.preventDefault();
+
+        // Show loading
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.classList.remove('hidden');
+        }
+        const resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.classList.add('hidden');
+        }
+        const errorSection = document.getElementById('errorSection');
+        if (errorSection) {
+            errorSection.classList.add('hidden');
+        }
+
+    const formData = {
+        state: document.getElementById('state').value,
+        district: document.getElementById('district').value,
+        pre_monsoon: document.getElementById('preMonsoon').value,
+        post_monsoon: document.getElementById('postMonsoon').value,
+        fluctuation: parseFloat(document.getElementById('fluctuation').value),
+        elevation: parseFloat(document.getElementById('elevation').value),
+        actual_rainfall: parseFloat(document.getElementById('actualRainfall').value),
+        normal_rainfall: parseFloat(document.getElementById('normalRainfall').value),
+        percent_dep: parseFloat(document.getElementById('percentDep').value)
+    };
+
+    try {
+        const response = await fetch('/aquifer/predict', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        currentResults = data;
+        displayResults(data);
+
+    } catch (error) {
+        console.error('Error:', error);
+        showError(error.message);
+    } finally {
+        // Hide loading
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        if (loadingIndicator) {
+            loadingIndicator.classList.add('hidden');
+        }
+    }
+}
+
+// Display results
+function displayResults(data) {
+    // Ensure results section exists
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        resultsSection.classList.remove('hidden');
+    }
+
+    // Main prediction
+    const mainPrediction = document.getElementById('mainPrediction');
+    if (mainPrediction) {
+        mainPrediction.textContent = data.prediction || 'Unknown';
+    }
+
+    // Confidence analysis
+    const maxProb = Math.max(...Object.values(data.probabilities || {}));
+    const confidencePercent = (maxProb * 100).toFixed(1);
+    const confidenceLevel = document.getElementById('confidenceLevel');
+    if (confidenceLevel) {
+        confidenceLevel.textContent = `Confidence: ${confidencePercent}%`;
+    }
+
+    // Confidence badge
+    const badge = document.getElementById('confidenceBadge');
+    if (badge) {
+        if (maxProb >= 0.7) {
+            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800';
+            badge.textContent = 'High Confidence';
+        } else if (maxProb >= 0.4) {
+            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800';
+            badge.textContent = 'Medium Confidence';
+        } else {
+            badge.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800';
+            badge.textContent = 'Low Confidence';
+        }
+    }
+
+    // Create chart with error handling and timeout
+    try {
+        // Wait a bit for DOM to be ready
+        setTimeout(() => {
+            createPredictionChart(data.probabilities);
+        }, 100);
+    } catch (error) {
+        console.error('Error creating chart:', error);
+        // Fallback to CSS chart
+        createCSSChart(data.probabilities, `Chart creation failed: ${error.message}`);
+    }
+
+    // Populate table
+    if (data.probabilities) {
+        populateProbabilitiesTable(data.probabilities);
+    }
+}
+
+// Create prediction chart
+function createPredictionChart(probabilities) {
+    const ctx = document.getElementById('predictionChart');
+
+    console.log('Creating chart with data:', probabilities);
+    console.log('Canvas element:', ctx);
+    console.log('Chart.js available:', typeof Chart);
+
+    // Check if canvas element exists
+    if (!ctx) {
+        console.error('Chart canvas element not found');
+        createCSSChart(probabilities, 'Canvas element not found');
+        return;
+    }
+
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js library not loaded');
+        createCSSChart(probabilities, 'Chart.js library not loaded. Using CSS fallback.');
+        return;
+    }
+
+    // Destroy existing chart if it exists
+    if (predictionChart) {
+        try {
+            predictionChart.destroy();
+            predictionChart = null;
+        } catch (error) {
+            console.warn('Error destroying existing chart:', error);
+        }
+    }
+
+    // Validate probabilities data
+    if (!probabilities || Object.keys(probabilities).length === 0) {
+        console.error('No probabilities data provided');
+        createCSSChart(probabilities, 'No data available for chart');
+        return;
+    }
+
+    try {
+        // Sort probabilities and get top 5
+        const sortedEntries = Object.entries(probabilities).sort(([,a], [,b]) => b - a);
+        const top5 = sortedEntries.slice(0, 5);
+
+        // Ensure we have data to display
+        if (top5.length === 0) {
+            console.error('No data to display in chart');
+            createCSSChart(probabilities, 'No data available');
+            return;
+        }
+
+        console.log('Top 5 entries:', top5);
+
+        const colors = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#8B5CF6'];
+
+        // Create new chart with minimal options to avoid issues
+        predictionChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: top5.map(([label]) => label),
+                datasets: [{
+                    data: top5.map(([, prob]) => parseFloat((prob * 100).toFixed(1))),
+                    backgroundColor: colors.slice(0, top5.length),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    },
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.parsed.toFixed(1)}%`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+
+        console.log('Chart created successfully:', predictionChart);
+    } catch (error) {
+        console.error('Error creating chart:', error);
+        createCSSChart(probabilities, `Chart creation failed: ${error.message}`);
+    }
+}
+
+// Create CSS-based fallback chart
+function createCSSChart(probabilities, errorMessage) {
+    const ctx = document.getElementById('predictionChart');
+    if (!ctx) return;
+
+    const chartContainer = ctx.parentElement;
+    if (!chartContainer) return;
+
+    // Sort probabilities and get top 5
+    const sortedEntries = probabilities ? Object.entries(probabilities).sort(([,a], [,b]) => b - a) : [];
+    const top5 = sortedEntries.slice(0, 5);
+
+    const colors = ['#10B981', '#3B82F6', '#EF4444', '#F59E0B', '#8B5CF6'];
+
+    let chartHTML = `
+        <div class="flex flex-col items-center justify-center h-full">
+            <div class="relative w-48 h-48 mb-4">
+                ${top5.map(([label, prob], index) => {
+                    const percentage = (prob * 100).toFixed(1);
+                    const color = colors[index] || '#6B7280';
+                    return `
+                        <div class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm"
+                             style="background: conic-gradient(${color} 0deg ${percentage * 3.6}deg, transparent ${percentage * 3.6}deg)">
+                            ${percentage}%
+                        </div>
+                    `;
+                }).join('')}
+                <div class="absolute inset-4 bg-white rounded-full flex items-center justify-center">
+                    <i class="fas fa-chart-pie text-2xl text-gray-400"></i>
+                </div>
+            </div>
+            <div class="text-center">
+                <p class="text-sm text-gray-600 mb-2">CSS Fallback Chart</p>
+                ${errorMessage ? `<p class="text-xs text-red-500">${errorMessage}</p>` : ''}
+            </div>
+            <div class="grid grid-cols-2 gap-2 mt-4 w-full max-w-xs">
+                ${top5.map(([label, prob], index) => {
+                    const percentage = (prob * 100).toFixed(1);
+                    const color = colors[index] || '#6B7280';
+                    return `
+                        <div class="flex items-center text-xs">
+                            <div class="w-3 h-3 rounded mr-2" style="background-color: ${color}"></div>
+                            <span class="truncate">${label}: ${percentage}%</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    chartContainer.innerHTML = chartHTML;
+}
+
+// Show chart error
+function showChartError(message) {
+    const ctx = document.getElementById('predictionChart');
+    if (!ctx) return;
+
+    const chartContainer = ctx.parentElement;
+    if (chartContainer) {
+        chartContainer.innerHTML = `
+            <div class="flex items-center justify-center h-full text-red-600 p-4">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                    <p class="font-medium">${message}</p>
+                    <small class="text-gray-500">Check browser console for details</small>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Populate probabilities table
+function populateProbabilitiesTable(probabilities) {
+    const tableBody = document.getElementById('probabilitiesTable');
+    if (!tableBody) {
+        console.error('Probabilities table not found');
+        return;
+    }
+
+    tableBody.innerHTML = '';
+
+    if (!probabilities || Object.keys(probabilities).length === 0) {
+        console.error('No probabilities data to display');
+        return;
+    }
+
+    const sortedEntries = Object.entries(probabilities).sort(([,a], [,b]) => b - a);
+
+    sortedEntries.forEach(([aquiferType, probability], index) => {
+        const row = document.createElement('tr');
+        row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+
+        const percentage = (probability * 100).toFixed(1);
+        let confidenceClass, confidenceText;
+
+        if (probability >= 0.7) {
+            confidenceClass = 'confidence-high';
+            confidenceText = 'High';
+        } else if (probability >= 0.4) {
+            confidenceClass = 'confidence-medium';
+            confidenceText = 'Medium';
+        } else {
+            confidenceClass = 'confidence-low';
+            confidenceText = 'Low';
+        }
+
+        row.innerHTML = `
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${index + 1}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${aquiferType}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${percentage}%</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="${confidenceClass} font-semibold">${confidenceText}</span>
+            </td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${
+                    probability === Math.max(...Object.values(probabilities))
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                }">
+                    ${probability === Math.max(...Object.values(probabilities)) ? 'Top Pick' : 'Alternative'}
+                </span>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+// Show error
+function showError(message) {
+    const errorSection = document.getElementById('errorSection');
+    if (errorSection) {
+        errorSection.classList.remove('hidden');
+    }
+
+    const errorMessage = document.getElementById('errorMessage');
+    if (errorMessage) {
+        errorMessage.textContent = message || 'An unknown error occurred';
+    }
+}
+
+// Reset form
+function resetForm() {
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        resultsSection.classList.add('hidden');
+    }
+
+    const errorSection = document.getElementById('errorSection');
+    if (errorSection) {
+        errorSection.classList.add('hidden');
+    }
+
+    const form = document.querySelector('form');
+    if (form) {
+        form.reset();
+    }
+
+    // Clear any existing charts
+    if (predictionChart) {
+        try {
+            predictionChart.destroy();
+        } catch (error) {
+            console.warn('Error destroying chart:', error);
+        }
+    }
+}
+
+// Export results
+function exportResults() {
+    if (!currentResults) {
+        alert('No results to export. Please run an analysis first.');
+        return;
+    }
+
+    const dataStr = JSON.stringify(currentResults, null, 2);
+    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+
+    const exportFileDefaultName = `aquifer_analysis_${new Date().toISOString().split('T')[0]}.json`;
+
+    const linkElement = document.createElement('a');
+    linkElement.setAttribute('href', dataUri);
+    linkElement.setAttribute('download', exportFileDefaultName);
+    linkElement.click();
+}
+
+// Go to main system
+function goHome() {
+    window.location.href = '/';
+}
+</script>
+</body>
+</html>
