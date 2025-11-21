@@ -1,0 +1,14 @@
+Aquifer_Type,Suitable_Structures,Feasibility_Notes,Recharge_Score
+Alluvium,"Recharge wells, Percolation tanks, Recharge trenches",Highly suitable for recharge due to high permeability and storage capacity,5
+Basalt,"Recharge shafts, Injection wells (preferably in fractured zones)",Moderately suitable; recharge effective only through fractures/joints,3
+Granite,"Recharge shafts, Check dams, Injection wells (fractured zones)","Low storage, depends on fractures; recharge possible with shafts",2
+Gneiss,"Recharge shafts, Check dams, Injection wells",Similar to granite; limited recharge through fractures,2
+Sandstone,"Recharge trenches, Spreading basins, Recharge wells",Moderate to good recharge capacity; widely used for RTRWH,4
+Limestone,"Recharge shafts, Injection wells (karst areas highly permeable)",Highly permeable in karst zones; excellent recharge potential,5
+Shale,"Recharge shafts (limited), Check dams, Small pits",Generally low permeability; recharge possible in weathered zones,2
+Schist,"Recharge shafts, Check dams",Recharge through weathered/fractured zones; moderate capacity,3
+Laterite,"Recharge pits, Small trenches, Percolation tanks",Moderate suitability; recharge effective in weathered zones,3
+Quartzite,"Recharge shafts (fractures), Small percolation tanks",Low to moderate suitability; recharge in fractured rock,2
+Khondalite,"Recharge trenches, Percolation tanks, Shafts",Moderately suitable in weathered zones,3
+Intrusive,"Deep shafts, Injection wells",Recharge feasible with deep artificial structures,2
+Basement Gneiss,"Recharge shafts, Check dams, Injection wells",Hard rock; recharge limited to weathered/fractured zones,2
