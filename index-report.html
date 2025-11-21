@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RWH Feasibility Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1e40af',
+            secondary: '#3b82f6',
+          }
+        }
+      }
+    }
+  </script>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+  <!-- Header -->
+  <header class="bg-white shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-6">
+        <div class="flex items-center">
+          <i class="fas fa-tint text-primary text-3xl mr-3"></i>
+          <h1 class="text-3xl font-bold text-gray-900">RWH Feasibility Checker</h1>
+        </div>
+        <div class="text-sm text-gray-500">
+          <i class="fas fa-calendar-alt mr-1"></i>
+          <span id="currentDate"></span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Input Section -->
+    <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+      <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+        <i class="fas fa-map-marker-alt text-primary mr-3"></i>
+        Location & Property Details
+      </h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Manual Input Section -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-medium text-gray-700 mb-4">Manual Input</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">District</label>
+              <input type="text" id="district" placeholder="Enter district" 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">State</label>
+              <input type="text" id="state" placeholder="Enter state" 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Roof Area (m²)</label>
+              <input type="number" id="roofArea" placeholder="Enter roof area" 
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Roof Type</label>
+              <select id="roofType" 
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option value="CONCRETE">Concrete</option>
+                <option value="GI_SHEET">GI Sheet</option>
+                <option value="TILE">Tile</option>
+                <option value="THATCHED">Thatched</option>
+              </select>
+            </div>
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Number of Dwellers</label>
+            <input type="number" id="dwellers" placeholder="Enter number of dwellers" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+          </div>
+          
+          <button onclick="submitManual()" 
+                  class="w-full bg-primary text-white py-3 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition duration-200 flex items-center justify-center">
+            <i class="fas fa-calculator mr-2"></i>
+            Check Feasibility
+          </button>
+        </div>
+
+        <!-- Map Section -->
+        <div class="space-y-4">
+          <h3 class="text-lg font-medium text-gray-700 mb-4">Map-based Location</h3>
+          <button onclick="getLocation()" 
+                  class="w-full bg-secondary text-white py-3 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-secondary focus:ring-offset-2 transition duration-200 flex items-center justify-center mb-4">
+            <i class="fas fa-location-arrow mr-2"></i>
+            Get My Location
+          </button>
+          <div id="map" class="w-full h-80 rounded-lg border-2 border-gray-200"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loadingState" class="hidden bg-white rounded-lg shadow-lg p-8 mb-8">
+      <div class="flex items-center justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mr-4"></div>
+        <span class="text-lg text-gray-600">Processing your request...</span>
+      </div>
+    </div>
+
+    <!-- Results Section -->
+    <div id="resultsSection" class="hidden">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-check-circle text-green-600 text-xl"></i>
+              </div>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-semibold text-gray-900">Feasibility</h3>
+              <p id="feasibilityStatus" class="text-2xl font-bold text-green-600">-</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-tint text-blue-600 text-xl"></i>
+              </div>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-semibold text-gray-900">Water Potential</h3>
+              <p id="waterPotential" class="text-2xl font-bold text-blue-600">-</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+          <div class="flex items-center">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <i class="fas fa-dollar-sign text-purple-600 text-xl"></i>
+              </div>
+            </div>
+            <div class="ml-4">
+              <h3 class="text-lg font-semibold text-gray-900">Cost Estimate</h3>
+              <p id="costEstimate" class="text-2xl font-bold text-purple-600">-</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detailed Report -->
+      <div class="bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+          <i class="fas fa-chart-line text-primary mr-3"></i>
+          Detailed Feasibility Report
+        </h2>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Location Information -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-map-marker-alt text-red-500 mr-2"></i>
+              Location Information
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-600">District:</span>
+                <span id="reportDistrict" class="font-medium">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">State:</span>
+                <span id="reportState" class="font-medium">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Coordinates:</span>
+                <span id="reportCoordinates" class="font-medium">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Property Details -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-home text-green-500 mr-2"></i>
+              Property Details
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2">
+              <div class="flex justify-between">
+                <span class="text-gray-600">Roof Area:</span>
+                <span id="reportRoofArea" class="font-medium">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Roof Type:</span>
+                <span id="reportRoofType" class="font-medium">-</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-gray-600">Number of Dwellers:</span>
+                <span id="reportDwellers" class="font-medium">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Climate Data -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-cloud-rain text-blue-500 mr-2"></i>
+              Climate Data
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2" id="climateData">
+              <!-- Climate data will be populated here -->
+            </div>
+          </div>
+
+          <!-- Analysis Results -->
+          <div>
+            <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+              <i class="fas fa-analytics text-purple-500 mr-2"></i>
+              Analysis Results
+            </h3>
+            <div class="bg-gray-50 rounded-lg p-4 space-y-2" id="analysisResults">
+              <!-- Analysis results will be populated here -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="mt-8">
+          <h3 class="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+            <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+            Recommendations
+          </h3>
+          <div id="recommendations" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+            <p class="text-gray-700">Recommendations will appear here after analysis.</p>
+          </div>
+        </div>
+
+        <!-- Raw JSON Toggle -->
+        <div class="mt-8">
+          <button onclick="toggleRawData()" class="text-primary hover:text-blue-700 flex items-center">
+            <i class="fas fa-code mr-2"></i>
+            <span id="rawToggleText">Show Raw JSON Data</span>
+          </button>
+          <div id="rawJsonData" class="hidden mt-4">
+            <pre class="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto text-sm font-mono"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="hidden bg-red-50 border border-red-200 rounded-lg p-6">
+      <div class="flex items-center">
+        <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+        <div>
+          <h3 class="text-lg font-semibold text-red-800">Error</h3>
+          <p id="errorMessage" class="text-red-700 mt-1"></p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-gray-200 mt-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="text-center text-gray-500">
+        <p>&copy; 2024 RWH Feasibility Checker. Built for sustainable water management.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let map;
+    let marker;
+    let geocoder;
+    let rawJsonVisible = false;
+    let lastResponseData = null;
+
+    // Initialize date
+    document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+
+    function initMap() {
+      geocoder = new google.maps.Geocoder();
+      map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: 20.5937, lng: 78.9629 },
+        zoom: 5,
+        styles: [
+          {
+            featureType: "water",
+            elementType: "geometry",
+            stylers: [{ color: "#e9e9e9" }, { lightness: 17 }]
+          },
+          {
+            featureType: "landscape",
+            elementType: "geometry",
+            stylers: [{ color: "#f5f5f5" }, { lightness: 20 }]
+          }
+        ]
+      });
+    }
+
+    // Show/hide sections
+    function showLoading() {
+      document.getElementById('loadingState').classList.remove('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+    }
+
+    function showResults() {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('resultsSection').classList.remove('hidden');
+      document.getElementById('errorState').classList.add('hidden');
+    }
+
+    function showError(message) {
+      document.getElementById('loadingState').classList.add('hidden');
+      document.getElementById('resultsSection').classList.add('hidden');
+      document.getElementById('errorState').classList.remove('hidden');
+      document.getElementById('errorMessage').textContent = message;
+    }
+
+    // Manual input submit
+    async function submitManual() {
+      const district = document.getElementById("district").value;
+      const state = document.getElementById("state").value;
+      const roofArea = parseFloat(document.getElementById("roofArea").value);
+      const roofType = document.getElementById("roofType").value;
+      const dwellers = parseInt(document.getElementById("dwellers").value);
+
+      if (!district || !state) {
+        showError("Please enter district and state (or use 'Get My Location').");
+        return;
+      }
+
+      const payload = { district, state, roofArea, roofType, dwellers };
+      showLoading();
+
+      try {
+        const res = await fetch("http://127.0.0.1:8000/process-location", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const data = await res.json();
+        lastResponseData = data;
+        displayResults(data);
+        showResults();
+      } catch (err) {
+        showError("Failed to fetch data: " + err.message);
+      }
+    }
+
+    // Display results in the report format
+    function displayResults(data) {
+      // Update summary cards
+      document.getElementById('feasibilityStatus').textContent = 
+        data.feasible ? 'Feasible' : 'Not Feasible';
+      document.getElementById('feasibilityStatus').className = 
+        data.feasible ? 'text-2xl font-bold text-green-600' : 'text-2xl font-bold text-red-600';
+      
+      document.getElementById('waterPotential').textContent = 
+        data.waterPotential ? `${data.waterPotential} L/year` : 'N/A';
+      
+      document.getElementById('costEstimate').textContent = 
+        data.estimatedCost ? `₹${data.estimatedCost.toLocaleString()}` : 'N/A';
+
+      // Update location information
+      document.getElementById('reportDistrict').textContent = data.district || '-';
+      document.getElementById('reportState').textContent = data.state || '-';
+      document.getElementById('reportCoordinates').textContent = 
+        data.coordinates ? `${data.coordinates.lat}, ${data.coordinates.lng}` : '-';
+
+      // Update property details
+      document.getElementById('reportRoofArea').textContent = 
+        data.roofArea ? `${data.roofArea} m²` : '-';
+      document.getElementById('reportRoofType').textContent = data.roofType || '-';
+      document.getElementById('reportDwellers').textContent = data.dwellers || '-';
+
+      // Update climate data
+      const climateContainer = document.getElementById('climateData');
+      climateContainer.innerHTML = '';
+      if (data.climate) {
+        Object.entries(data.climate).forEach(([key, value]) => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between';
+          div.innerHTML = `
+            <span class="text-gray-600">${formatKey(key)}:</span>
+            <span class="font-medium">${value}</span>
+          `;
+          climateContainer.appendChild(div);
+        });
+      }
+
+      // Update analysis results
+      const analysisContainer = document.getElementById('analysisResults');
+      analysisContainer.innerHTML = '';
+      if (data.analysis) {
+        Object.entries(data.analysis).forEach(([key, value]) => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between';
+          div.innerHTML = `
+            <span class="text-gray-600">${formatKey(key)}:</span>
+            <span class="font-medium">${value}</span>
+          `;
+          analysisContainer.appendChild(div);
+        });
+      }
+
+      // Update recommendations
+      const recommendationsContainer = document.getElementById('recommendations');
+      if (data.recommendations && Array.isArray(data.recommendations)) {
+        recommendationsContainer.innerHTML = `
+          <ul class="list-disc list-inside space-y-2">
+            ${data.recommendations.map(rec => `<li class="text-gray-700">${rec}</li>`).join('')}
+          </ul>
+        `;
+      } else if (data.recommendations) {
+        recommendationsContainer.innerHTML = `<p class="text-gray-700">${data.recommendations}</p>`;
+      }
+
+      // Update raw JSON
+      const rawDataContainer = document.querySelector('#rawJsonData pre');
+      rawDataContainer.textContent = JSON.stringify(data, null, 2);
+    }
+
+    // Utility function to format keys
+    function formatKey(key) {
+      return key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+    }
+
+    // Toggle raw JSON data
+    function toggleRawData() {
+      const rawDataDiv = document.getElementById('rawJsonData');
+      const toggleText = document.getElementById('rawToggleText');
+      
+      if (rawJsonVisible) {
+        rawDataDiv.classList.add('hidden');
+        toggleText.textContent = 'Show Raw JSON Data';
+        rawJsonVisible = false;
+      } else {
+        rawDataDiv.classList.remove('hidden');
+        toggleText.textContent = 'Hide Raw JSON Data';
+        rawJsonVisible = true;
+      }
+    }
+
+    // Map-based location
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+      } else {
+        showError("Geolocation is not supported by this browser.");
+      }
+    }
+
+    function showPosition(position) {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+
+      map.setCenter({ lat, lng });
+      map.setZoom(15);
+
+      if (marker) marker.setMap(null);
+      marker = new google.maps.Marker({
+        position: { lat, lng },
+        map: map,
+        title: "You are here!",
+        icon: {
+          url: 'data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%231e40af"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>',
+          scaledSize: new google.maps.Size(40, 40)
+        }
+      });
+
+      // Reverse geocode to fill district/state automatically
+      geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+        if (status === "OK" && results[0]) {
+          let city = "", state = "";
+          results[0].address_components.forEach(comp => {
+            if (comp.types.includes("locality")) city = comp.long_name;
+            if (comp.types.includes("administrative_area_level_1")) state = comp.long_name;
+          });
+
+          if (city) document.getElementById("district").value = city;
+          if (state) document.getElementById("state").value = state;
+        }
+      });
+    }
+
+    function showLocationError(error) {
+      switch(error.code) {
+        case error.PERMISSION_DENIED:
+          showError("User denied location access.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          showError("Location information is unavailable.");
+          break;
+        case error.TIMEOUT:
+          showError("Location request timed out.");
+          break;
+        default:
+          showError("An unknown error occurred while retrieving location.");
+      }
+    }
+  </script>
+
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCZNsn2uYkFtX0jPK4hZ8tdxQJ--Uapqdo&callback=initMap">
+  </script>
+</body>
+</html>
