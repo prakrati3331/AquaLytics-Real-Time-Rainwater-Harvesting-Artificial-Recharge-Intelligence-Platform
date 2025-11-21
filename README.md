@@ -262,3 +262,6 @@ For support, please contact:
 ---
 
 **Made with ❤️ for sustainable water resource management**
+
+Download PPT
+https://github.com/prakrati3331/AquaLytics-Real-Time-Rainwater-Harvesting-Artificial-Recharge-Intelligence-Platform/blob/main/RWHS%20PPT.pptx
