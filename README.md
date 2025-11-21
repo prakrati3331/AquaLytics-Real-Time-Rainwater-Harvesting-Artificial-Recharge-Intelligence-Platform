@@ -252,13 +252,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **Indian Meteorological Department (IMD)** for rainfall data
 - **Open Source Community** for the amazing tools and libraries
 
-## 📞 Support
-
-For support, please contact:
-- **Email**: shubhammallick@gmail.com
-- **Issues**: Create an issue in the GitHub repository
-- **Discussions**: Use GitHub Discussions for questions and ideas
-
 ---
 
 **Made with ❤️ for sustainable water resource management**
